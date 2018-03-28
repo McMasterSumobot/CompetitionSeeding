@@ -20,10 +20,27 @@ function getTeamListFromTextFile(pathToTeamList) {
 }
 
 function createMatchUps(groups, minTeamsInGroup) {
-  console.log(minTeamsInGroup);
   groups.forEach(group => {
-    
+    if (group.teams.length === minTeamsInGroup) {
+      console.log('Min number of teams per group');
+      group.teams.forEach(team => {
+        team.matches = group.teamNames.filter(name => name !== team.name);
+      })
+    } else {
+      console.log('Not the min number of teams per group');
+      
+
+      group.teams.forEach(team => {
+        // matches === minTeamsInGroup - 1;
+        
+      });
+
+
+
+    }
   });
+
+  // console.log(JSON.stringify(groups, null, 2));
 }
 
 // this list is of team objects
@@ -45,7 +62,8 @@ function createGroups(teamList) {
   for(let i = 0; i < numberOfGroups; i++) {
     groups.push({
       id: i,
-      teams: []
+      teams: [],
+      teamNames: []
     });
   }
 
@@ -54,6 +72,7 @@ function createGroups(teamList) {
       name: teamName,
       matches: [] // list of teams they play, can get the count from this
     });
+    groups[currentGroup].teamNames.push(teamName);
     currentGroup++;
     if (currentGroup >= numberOfGroups) {
       currentGroup = 0;
