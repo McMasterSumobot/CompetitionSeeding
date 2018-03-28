@@ -20,19 +20,52 @@ function getTeamListFromTextFile(pathToTeamList) {
 }
 
 function createMatchUps(groups, minTeamsInGroup) {
-  groups.forEach(group => {
-    if (group.teams.length === minTeamsInGroup) {
-      console.log('Min number of teams per group');
-      group.teams.forEach(team => {
-        team.matches = group.teamNames.filter(name => name !== team.name);
-      })
-    } else {
-      console.log('Not the min number of teams per group');
-      
+  const matchedGroups = [];
+  console.log('minTeamsInGroup: ' + minTeamsInGroup);
 
-      group.teams.forEach(team => {
-        // matches === minTeamsInGroup - 1;
-        
+  groups.forEach(group => {
+    matchedGroups.push({
+      id: group.id,
+      teams: []
+    });
+
+    if (group.teams.length === minTeamsInGroup) {
+      // console.log('Min number of teams per group');
+      group.teams.forEach(teamName => {
+        const team = {
+          name: teamName,
+          teamsFaced: group.teams.filter(name => name !== teamName)
+        };
+        matchedGroups[group.id].teams.push(team);
+      });
+    } else {
+      // console.log('Not the min number of teams per group');
+      let teamLookUp = {}
+      group.teams.forEach((teamName, i) => {
+        matchedGroups[group.id].teams.push({name: teamName, teamsFaced: []});
+        teamLookUp[teamName] = i;
+      });
+
+      // console.log(matchedGroups[group.id]);
+      // console.log(teamLookUp);
+
+      group.teams.forEach((teamA, i) => {
+        const potentialMatch = group.teams.filter(name => name !== teamA);
+        console.log('+-----------------------------------------------------------------+');
+        console.log('| Pairings for team: ' + teamA);
+        console.log('+-----------------------------------------------------------------+');
+        potentialMatch.forEach(teamB => {
+          console.log('| Number of matches: ' + matchedGroups[group.id].teams[i].teamsFaced.length);
+          const isTeamFaced = matchedGroups[group.id].teams[i].teamsFaced.includes(teamB);
+          const teamAMaxedMatches = matchedGroups[group.id].teams[i].teamsFaced.length < (minTeamsInGroup - 1);
+          const teamBMaxedMatches = matchedGroups[group.id].teams[teamLookUp[teamB]].teamsFaced.length < (minTeamsInGroup - 1);
+
+          if (!isTeamFaced && teamAMaxedMatches && teamBMaxedMatches) {
+            matchedGroups[group.id].teams[i].teamsFaced.push(teamB);
+            matchedGroups[group.id].teams[teamLookUp[teamB]].teamsFaced.push(teamA);
+          }
+        });
+        console.log('\n');
       });
 
 
@@ -40,7 +73,7 @@ function createMatchUps(groups, minTeamsInGroup) {
     }
   });
 
-  // console.log(JSON.stringify(groups, null, 2));
+  // console.log(JSON.stringify(matchedGroups, null, 2));
 }
 
 // this list is of team objects
@@ -62,17 +95,12 @@ function createGroups(teamList) {
   for(let i = 0; i < numberOfGroups; i++) {
     groups.push({
       id: i,
-      teams: [],
-      teamNames: []
+      teams: []
     });
   }
 
   teamList.forEach(teamName => {
-    groups[currentGroup].teams.push({
-      name: teamName,
-      matches: [] // list of teams they play, can get the count from this
-    });
-    groups[currentGroup].teamNames.push(teamName);
+    groups[currentGroup].teams.push(teamName);
     currentGroup++;
     if (currentGroup >= numberOfGroups) {
       currentGroup = 0;
