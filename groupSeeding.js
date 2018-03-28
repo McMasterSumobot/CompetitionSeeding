@@ -4,7 +4,8 @@
 // create game match ups between teams in each group
 
 fs = require('fs');
-const pathToTeamList = './teamList.txt'; // each teams should be on it's own line
+const pathToTeamList = './teamList.txt'; // each teams should be on it's own line, no empty lines!
+const outputFile = './Groups.csv';
 
 function getTeamListFromTextFile(pathToTeamList) {
   return new Promise((fulfill, reject) => {
@@ -15,6 +16,13 @@ function getTeamListFromTextFile(pathToTeamList) {
       }
       fulfill(data.split(/\r?\n/));
     });
+  });
+}
+
+function createMatchUps(groups, minTeamsInGroup) {
+  console.log(minTeamsInGroup);
+  groups.forEach(group => {
+    
   });
 }
 
@@ -30,8 +38,8 @@ function createGroups(teamList) {
     numberOfGroups = 4;
   }
 
-  console.log('numberOfGroups: ' + numberOfGroups);
-  let currentGroupAssignment = 1;
+  const minTeamsInGroup = Math.floor(teamList.length / numberOfGroups);
+  let currentGroup = 0;
   const groups = [];
 
   for(let i = 0; i < numberOfGroups; i++) {
@@ -42,11 +50,19 @@ function createGroups(teamList) {
   }
 
   teamList.forEach(teamName => {
-
+    groups[currentGroup].teams.push({
+      name: teamName,
+      matches: [] // list of teams they play, can get the count from this
+    });
+    currentGroup++;
+    if (currentGroup >= numberOfGroups) {
+      currentGroup = 0;
+    }
   });
 
-
+  createMatchUps(groups, minTeamsInGroup);
 }
+
 
 
 
