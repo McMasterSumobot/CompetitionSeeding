@@ -19,14 +19,13 @@ function createAllMatchUps(groups) {
   for (let i = 0; i < groups.length; i++) {
     let group = groups[i];
     let teams = group.teams;
-    let matchId = 0;
 
     teams.forEach(teamA => {
       teams.forEach(teamB => {
         if (teamA !== teamB) {
 
           if (group.matches.length === 0) {
-            group.matches.push({id: matchId, teams: [teamA, teamB]});
+            group.matches.push({teams: [teamA, teamB]});
             group[teamA]++;
             group[teamB]++;
           } else {
@@ -41,7 +40,7 @@ function createAllMatchUps(groups) {
             });
 
             if (!matchAlreadyExists) {
-              group.matches.push({id: matchId, teams: [teamA, teamB]});
+              group.matches.push({teams: [teamA, teamB]});
               group[teamA]++;
               group[teamB]++;
             }
@@ -53,23 +52,142 @@ function createAllMatchUps(groups) {
   return groups;
 }
 
+function hasExtraMatches(group, matchesPerGroup) {
+  const teamNames = group.teams;
+  let extraCount = 0;
+
+  teamNames.forEach(name => {
+    if (group[name] > matchesPerGroup) {
+      extraCount++;
+    }
+  });
+  return extraCount > 1;
+}
+
 function removeExtraMatches(groups, matchesPerGroup) {
   for (let i = 0; i < groups.length; i++) {
     const group = groups[i];
-    const teamNames = group.teams;
-    let correctNumberOfMatches = true;
-    teamNames.forEach(name => {
-      if (group[name] > matchesPerGroup) {
-        correctNumberOfMatches = false;
-      }
-    });
+    // todo: replace this with a while check
+    if (hasExtraMatches(group, matchesPerGroup)) {
+      // console.log('Too many matches!');
 
-    if (!correctNumberOfMatches) {
-      console.log('Too many matches!');
+      group.teams.forEach(teamA => {
+        group.teams.forEach(teamB => {
+          if (teamA !== teamB) {
+            if (group[teamA] > matchesPerGroup && group[teamB] > matchesPerGroup) {
+              // check if the two have a match together and remove it
+              let matchIndex = -1;
+              group.matches.forEach((match, i) => {
+                if (teamA === match.teams[0] && teamB === match.teams[1]) {
+                  matchIndex = i;
+                }
+                if (teamA === match.teams[1] && teamB === match.teams[0]) {
+                  matchIndex = i;
+                }
+              });
+
+              if (matchIndex !== -1) {
+                group.matches.splice(matchIndex, 1);
+                group[teamA]--;
+                group[teamB]--;
+              }
+            }
+          }
+        });
+      });
+
+
+
+
     }
   }
 
   return groups;
+}
+
+function exportToCsv(groups) {
+  const csvLines = [];
+
+  let headerLine = '';
+  for(let i = 0; i < groups.length; i++) {
+    headerLine = `${headerLine}Group ${i},Results,,`;
+  }
+  csvLines.push(headerLine);
+
+  let generatedAllMatches = false;
+  let groupCheckList = [];
+  let matchIndex = 0;
+
+  groups.forEach(() => {
+    groupCheckList.push(false);
+  });
+
+  while(!generatedAllMatches) {
+    let matchRow = '';
+
+    for (let i = 0; i < groups.length; i++) {
+      const matches = groups[i].matches;
+      if (matchIndex < matches.length) {
+        matchRow = `${matchRow}${matches[matchIndex].teams[0]} vs ${matches[matchIndex].teams[1]},,,`;
+      } else {
+        groupCheckList[i] = true;
+        matchRow = `${matchRow},,`;
+      }
+    }
+    csvLines.push(matchRow);
+
+    let test = true;
+    groupCheckList.forEach(isDone => {
+      test = test && isDone;
+    });
+
+    generatedAllMatches = test;
+    matchIndex++;
+  }
+  csvLines.push('\n');
+
+  let teamListLine = '';
+  for(let i = 0; i < groups.length; i++) {
+    teamListLine = `${teamListLine}Group ${i} Teams,Matches Played,,`;
+  }
+  csvLines.push(teamListLine);
+
+  groupCheckList = [];
+  let listedAllGroups = false;
+  let teamIndex = 0;
+  groups.forEach(() => {
+    groupCheckList.push(false);
+  });
+
+  while(!listedAllGroups) {
+    let groupRow = '';
+
+    for (let i = 0; i < groups.length; i++) {
+      if (teamIndex < groups[i].teams.length) {
+        groupRow = `${groupRow}${groups[i].teams[teamIndex]},${groups[i][groups[i].teams[teamIndex]]},,`;
+      } else {
+        groupCheckList[i] = true;
+        groupRow = `${groupRow},,,`
+      }
+    }
+    csvLines.push(groupRow);
+
+    let test = true;
+    groupCheckList.forEach(isDone => {
+      test = test && isDone;
+    });
+
+    listedAllGroups = test;
+    teamIndex++;
+  }
+
+  let writeStream = fs.createWriteStream(outputFile);
+  writeStream.once('open', () => {
+    csvLines.forEach(line => {
+      writeStream.write(line + '\n');
+    });
+    writeStream.end();
+  });
 }
 
 getTeamListFromTextFile(pathToTeamList).then(teamList => {
@@ -98,6 +216,8 @@ getTeamListFromTextFile(pathToTeamList).then(teamList => {
 
   groups = createAllMatchUps(groups);
   groups = removeExtraMatches(groups, matchesPerGroup);
+
+  exportToCsv(groups);
 
   // console.log(JSON.stringify(groups, null, 2));
 });
